@@ -19,4 +19,40 @@ Jumlah:<br>
 </form>
 
 </body>
+
 </html>
+<input type="file" id="fileInput">
+<button onclick="importData()">Import Data</button>
+
+<table border="1" id="tabelData">
+<tr>
+<th>Nama Barang</th>
+<th>Jumlah</th>
+</tr>
+</table>
+<script>
+function importData(){
+  let file = document.getElementById("fileInput").files[0];
+  let reader = new FileReader();
+
+  reader.onload = function(e){
+    let rows = e.target.result.split("\n");
+    let table = document.getElementById("tabelData");
+
+    rows.forEach(row=>{
+      let cols = row.split(",");
+      let tr = document.createElement("tr");
+
+      cols.forEach(col=>{
+        let td = document.createElement("td");
+        td.innerText = col;
+        tr.appendChild(td);
+      });
+
+      table.appendChild(tr);
+    });
+  };
+
+  reader.readAsText(file);
+}
+</script>
