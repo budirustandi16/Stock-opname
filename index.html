@@ -1,57 +1,234 @@
+<!DOCTYPE html>
+<html>
 
-<script>
-function importData(){
-  let file = document.getElementById("fileInput").files[0];
-  let reader = new FileReader();
+<head>
 
-  reader.onload = function(e){
-    let rows = e.target.result.split("\n");
-    let table = document.getElementById("tabelData");
+<meta charset="UTF-8">
+<title>Stock Opname</title>
 
-    rows.forEach(row=>{
-      let cols = row.split(",");
-      let tr = document.createElement("tr");
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 
-      cols.forEach(col=>{
-        let td = document.createElement("td");
-        td.innerText = col;
-        tr.appendChild(td);
-      });
+<style>
 
-      table.appendChild(tr);
-    });
-  };
-
-  reader.readAsText(file);
+body{
+font-family:Arial;
+background:#f4f6f8;
+padding:20px;
 }
-</script>
-<label>Nama Barang</label><br>
-<input type="text" list="barangList" placeholder="Ketik nama barang"><br><br>
 
-<datalist id="barangList">
-<option value="Pensil">
-<option value="Buku">
-<option value="Pulpen">
-<option value="Penghapus">
-</datalist>
+.container{
+max-width:500px;
+margin:auto;
+background:white;
+padding:20px;
+border-radius:10px;
+box-shadow:0 0 10px rgba(0,0,0,0.1);
+}
+
+input,button{
+width:100%;
+padding:10px;
+margin-top:10px;
+font-size:16px;
+}
+
+table{
+width:100%;
+margin-top:20px;
+border-collapse:collapse;
+}
+
+th,td{
+border:1px solid #ccc;
+padding:8px;
+}
+
+</style>
+
+</head>
+
 <body>
 
-<h2>Input Data Barang</h2>
+<div class="container">
 
-<label>Nama Barang</label><br>
-<input type="text" list="barangList"><br><br>
+<h2>Stock Opname</h2>
 
-<label>Jumlah</label><br>
-<input type="number"><br><br>
+<label>Nama Barang</label>
+<input list="barangList" id="namaBarang">
 
-<button>Simpan</button>
+<datalist id="barangList"></datalist>
 
-<datalist id="barangList">
-<option value="Pensil">
-<option value="Buku">
-<option value="Pulpen">
-<option value="Penghapus">
-</datalist>
+<label>Qty</label>
+<input type="number" id="qty">
+
+<button onclick="tambahData()">Tambah</button>
+
+<button onclick="hapusSemua()">Hapus Semua</button>
+
+<button onclick="exportExcel()">Export Excel</button>
+
+<table id="tabel">
+
+<thead>
+
+<tr>
+<th>Nama Barang</th>
+<th>Qty</th>
+<th>Tanggal</th>
+<th>Aksi</th>
+</tr>
+
+</thead>
+
+<tbody></tbody>
+
+</table>
+
+</div>
+
+<script>
+
+const SUPABASE_URL="https://PROJECT.supabase.co"
+const SUPABASE_KEY="PUBLIC_ANON_KEY"
+
+const supabaseClient=supabase.createClient(SUPABASE_URL,SUPABASE_KEY)
+
+loadBarang()
+loadStock()
+
+async function loadBarang(){
+
+let { data } = await supabaseClient
+.from("barang")
+.select("*")
+
+let list=document.getElementById("barangList")
+
+list.innerHTML=""
+
+data.forEach(item=>{
+
+let option=document.createElement("option")
+
+option.value=item.nama_barang
+
+list.appendChild(option)
+
+})
+
+}
+
+async function tambahData(){
+
+let nama=document.getElementById("namaBarang").value
+let qty=document.getElementById("qty").value
+
+if(!nama || !qty){
+
+alert("Isi data dulu")
+
+return
+
+}
+
+await supabaseClient
+.from("stock_opname")
+.insert([{
+
+nama_barang:nama,
+qty:qty,
+tanggal:new Date()
+
+}])
+
+document.getElementById("namaBarang").value=""
+document.getElementById("qty").value=""
+
+loadStock()
+
+}
+
+async function loadStock(){
+
+let { data } = await supabaseClient
+.from("stock_opname")
+.select("*")
+.order("id",{ascending:false})
+
+let tbody=document.querySelector("#tabel tbody")
+
+tbody.innerHTML=""
+
+data.forEach(item=>{
+
+let tr=document.createElement("tr")
+
+tr.innerHTML=`
+
+<td>${item.nama_barang}</td>
+<td>${item.qty}</td>
+<td>${new Date(item.tanggal).toLocaleString()}</td>
+
+<td>
+<button onclick="hapusData(${item.id})">Hapus</button>
+</td>
+
+`
+
+tbody.appendChild(tr)
+
+})
+
+}
+
+async function hapusData(id){
+
+if(confirm("Hapus data ini?")){
+
+await supabaseClient
+.from("stock_opname")
+.delete()
+.eq("id",id)
+
+loadStock()
+
+}
+
+}
+
+async function hapusSemua(){
+
+if(confirm("Hapus semua data?")){
+
+await supabaseClient
+.from("stock_opname")
+.delete()
+.gt("id",0)
+
+loadStock()
+
+}
+
+}
+
+async function exportExcel(){
+
+let { data } = await supabaseClient
+.from("stock_opname")
+.select("*")
+
+let ws=XLSX.utils.json_to_sheet(data)
+
+let wb=XLSX.utils.book_new()
+
+XLSX.utils.book_append_sheet(wb,ws,"Stock")
+
+XLSX.writeFile(wb,"stock_opname.xlsx")
+
+}
+
+</script>
 
 </body>
-
+</html>
